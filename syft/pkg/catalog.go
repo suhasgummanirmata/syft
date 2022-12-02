@@ -103,30 +103,35 @@ func (c *Catalog) Packages(ids []artifact.ID) (result []Package) {
 
 // Add n packages to the catalog.
 func (c *Catalog) Add(pkgs ...Package) {
+	for _, p := range pkgs {
+		c.add(p)
+	}
+}
+
+// Add a package to the Catalog.
+func (c *Catalog) add(p Package) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	for _, p := range pkgs {
-		id := p.ID()
-		if id == "" {
-			log.Warnf("found package with empty ID while adding to the catalog: %+v", p)
-			p.SetID()
-			id = p.ID()
-		}
-
-		if existing, exists := c.byID[id]; exists {
-			// there is already a package with this fingerprint merge the existing record with the new one
-			if err := existing.merge(p); err != nil {
-				log.Warnf("failed to merge packages: %+v", err)
-			} else {
-				c.byID[id] = existing
-				c.addPathsToIndex(p)
-			}
-			return
-		}
-
-		c.addToIndex(p)
+	id := p.ID()
+	if id == "" {
+		log.Warnf("found package with empty ID while adding to the catalog: %+v", p)
+		p.SetID()
+		id = p.ID()
 	}
+
+	if existing, exists := c.byID[id]; exists {
+		// there is already a package with this fingerprint merge the existing record with the new one
+		if err := existing.merge(p); err != nil {
+			log.Warnf("failed to merge packages: %+v", err)
+		} else {
+			c.byID[id] = existing
+			c.addPathsToIndex(p)
+		}
+		return
+	}
+
+	c.addToIndex(p)
 }
 
 func (c *Catalog) addToIndex(p Package) {

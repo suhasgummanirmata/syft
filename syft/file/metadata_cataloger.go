@@ -17,12 +17,18 @@ func NewMetadataCataloger() *MetadataCataloger {
 	return &MetadataCataloger{}
 }
 
-func (i *MetadataCataloger) Catalog(resolver source.FileResolver) (map[source.Coordinates]source.FileMetadata, error) {
+func (i *MetadataCataloger) Catalog(resolver source.FileResolver, coordinates ...source.Coordinates) (map[source.Coordinates]source.FileMetadata, error) {
 	results := make(map[source.Coordinates]source.FileMetadata)
 	var locations []source.Location
-	for location := range resolver.AllLocations() {
-		locations = append(locations, location)
+
+	if len(coordinates) == 0 {
+		locations = allRegularFiles(resolver)
+	} else {
+		for _, c := range coordinates {
+			locations = append(locations, source.NewLocationFromCoordinates(c))
+		}
 	}
+
 	stage, prog := metadataCatalogingProgress(int64(len(locations)))
 	for _, location := range locations {
 		stage.Current = location.RealPath

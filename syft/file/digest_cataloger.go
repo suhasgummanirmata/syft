@@ -24,15 +24,24 @@ type DigestsCataloger struct {
 	hashes []crypto.Hash
 }
 
-func NewDigestsCataloger(hashes []crypto.Hash) (*DigestsCataloger, error) {
+func NewDigestsCataloger(hashes []crypto.Hash) *DigestsCataloger {
 	return &DigestsCataloger{
 		hashes: hashes,
-	}, nil
+	}
 }
 
-func (i *DigestsCataloger) Catalog(resolver source.FileResolver) (map[source.Coordinates][]Digest, error) {
+func (i *DigestsCataloger) Catalog(resolver source.FileResolver, coordinates ...source.Coordinates) (map[source.Coordinates][]Digest, error) {
 	results := make(map[source.Coordinates][]Digest)
-	locations := allRegularFiles(resolver)
+	var locations []source.Location
+
+	if len(coordinates) == 0 {
+		locations = allRegularFiles(resolver)
+	} else {
+		for _, c := range coordinates {
+			locations = append(locations, source.NewLocationFromCoordinates(c))
+		}
+	}
+
 	stage, prog := digestsCatalogingProgress(int64(len(locations)))
 	for _, location := range locations {
 		stage.Current = location.RealPath

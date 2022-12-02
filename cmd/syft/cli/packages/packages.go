@@ -3,22 +3,22 @@ package packages
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/wagoodman/go-partybus"
 
 	"github.com/anchore/stereoscope"
 	"github.com/anchore/syft/cmd/syft/cli/eventloop"
 	"github.com/anchore/syft/cmd/syft/cli/options"
-	"github.com/anchore/syft/internal"
 	"github.com/anchore/syft/internal/bus"
 	"github.com/anchore/syft/internal/config"
 	"github.com/anchore/syft/internal/log"
 	"github.com/anchore/syft/internal/ui"
-	"github.com/anchore/syft/internal/version"
 	"github.com/anchore/syft/syft"
-	"github.com/anchore/syft/syft/artifact"
 	"github.com/anchore/syft/syft/event"
+	"github.com/anchore/syft/syft/file"
 	"github.com/anchore/syft/syft/formats/template"
+	"github.com/anchore/syft/syft/pkg/cataloger"
 	"github.com/anchore/syft/syft/sbom"
 	"github.com/anchore/syft/syft/source"
 )
@@ -94,44 +94,37 @@ func execWorker(app *config.Application, si source.Input, writer sbom.Writer) <-
 }
 
 func GenerateSBOM(src *source.Source, errs chan error, app *config.Application) (*sbom.SBOM, error) {
-	tasks, err := eventloop.Tasks(app)
+	hashers, err := file.Hashers(app.FileMetadata.Digests...)
 	if err != nil {
+		// TODO: this is awkward, fix this
+		err = fmt.Errorf("unable to create file hashers: %w", err)
+		errs <- err
 		return nil, err
 	}
 
-	s := sbom.SBOM{
-		Source: src.Metadata,
-		Descriptor: sbom.Descriptor{
-			Name:          internal.ApplicationName,
-			Version:       version.FromBuild().Version,
-			Configuration: app,
-		},
-	}
+	cfg := syft.DefaultSBOMBuilderConfig().
+		WithCatalogers(src.Metadata,
+			cataloger.Config{
+				Search: cataloger.SearchConfig{
+					IncludeIndexedArchives:   app.Package.SearchIndexedArchives,
+					IncludeUnindexedArchives: app.Package.SearchUnindexedArchives,
+					Scope:                    source.ParseScope(app.Package.Cataloger.Scope),
+				},
+				Relationships: cataloger.RelationshipsConfig{
+					FileOwnership:        true,  // TODO: tie to app config
+					FileOwnershipOverlap: false, // TODO: tie to app config
+				},
+				SyntheticData: cataloger.SyntheticConfig{
+					GenerateCPEs:          true, // TODO: tie to app config
+					GuessLanguageFromPURL: true, // TODO: tie to app config
+				},
+				FileCatalogingSelection: cataloger.OwnedFilesSelection, // TODO: tie to app config
+				FileHashers:             hashers,
+			},
+			strings.Join(app.Catalogers, ","), // TODO: update app config to just be a string?
+		)
 
-	buildRelationships(&s, src, tasks, errs)
-
-	return &s, nil
-}
-
-func buildRelationships(s *sbom.SBOM, src *source.Source, tasks []eventloop.Task, errs chan error) {
-	var relationships []<-chan artifact.Relationship
-	for _, task := range tasks {
-		c := make(chan artifact.Relationship)
-		relationships = append(relationships, c)
-		go eventloop.RunTask(task, &s.Artifacts, src, c, errs)
-	}
-
-	s.Relationships = append(s.Relationships, MergeRelationships(relationships...)...)
-}
-
-func MergeRelationships(cs ...<-chan artifact.Relationship) (relationships []artifact.Relationship) {
-	for _, c := range cs {
-		for n := range c {
-			relationships = append(relationships, n)
-		}
-	}
-
-	return relationships
+	return syft.BuildSBOM(src, cfg)
 }
 
 func validateOutputOptions(app *config.Application) error {

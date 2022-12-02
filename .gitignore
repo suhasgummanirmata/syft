@@ -41,3 +41,7 @@ bin/
 # attestation
 cosign.key
 cosign.pub
+
+# go workspaces
+go.work
+go.work.sum

@@ -107,10 +107,7 @@ func generateCatalogFileDigestsTask(app *config.Application) (Task, error) {
 		hashes = append(hashes, hashObj)
 	}
 
-	digestsCataloger, err := file.NewDigestsCataloger(hashes)
-	if err != nil {
-		return nil, err
-	}
+	digestsCataloger := file.NewDigestsCataloger(hashes)
 
 	task := func(results *sbom.Artifacts, src *source.Source) ([]artifact.Relationship, error) {
 		resolver, err := src.FileResolver(app.FileMetadata.Cataloger.ScopeOpt)
