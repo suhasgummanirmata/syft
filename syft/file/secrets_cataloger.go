@@ -31,6 +31,7 @@ type SecretsCataloger struct {
 	skipFilesAboveSize int64
 }
 
+// Deprecated: will be removed in syft v1.0.0
 func NewSecretsCataloger(patterns map[string]*regexp.Regexp, revealValues bool, maxFileSize int64) (*SecretsCataloger, error) {
 	return &SecretsCataloger{
 		patterns:           patterns,
@@ -39,6 +40,7 @@ func NewSecretsCataloger(patterns map[string]*regexp.Regexp, revealValues bool, 
 	}, nil
 }
 
+// Deprecated: will be removed in syft v1.0.0
 func (i *SecretsCataloger) Catalog(resolver source.FileResolver) (map[source.Coordinates][]SearchResult, error) {
 	results := make(map[source.Coordinates][]SearchResult)
 	locations := allRegularFiles(resolver)

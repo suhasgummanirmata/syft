@@ -3,7 +3,7 @@ package config
 import (
 	"github.com/spf13/viper"
 
-	"github.com/anchore/syft/syft/pkg/cataloger"
+	"github.com/anchore/syft/syft/cataloger"
 )
 
 type pkg struct {

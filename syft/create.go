@@ -5,10 +5,11 @@ import (
 	"sync"
 
 	"github.com/anchore/syft/internal"
+	"github.com/anchore/syft/internal/log"
 	"github.com/anchore/syft/internal/version"
+	"github.com/anchore/syft/syft/cataloger"
 	"github.com/anchore/syft/syft/linux"
 	"github.com/anchore/syft/syft/pkg"
-	"github.com/anchore/syft/syft/pkg/cataloger"
 	"github.com/anchore/syft/syft/sbom"
 	"github.com/anchore/syft/syft/source"
 )
@@ -32,11 +33,6 @@ func DefaultSBOMBuilderConfig() *SBOMBuilderConfig {
 	}
 }
 
-func (c *SBOMBuilderConfig) WithParallelism(parallelism uint) *SBOMBuilderConfig {
-	c.Parallelism = parallelism
-	return c
-}
-
 func (c *SBOMBuilderConfig) AsTool(name, version string) *SBOMBuilderConfig {
 	c.ToolName = name
 	c.ToolVersion = version
@@ -48,31 +44,31 @@ func (c *SBOMBuilderConfig) WithToolConfiguration(config interface{}) *SBOMBuild
 	return c
 }
 
-func (c *SBOMBuilderConfig) WithTasks(tasks ...Task) *SBOMBuilderConfig {
-	c.TaskGroups = [][]Task{tasks}
+func (c *SBOMBuilderConfig) WithParallelism(parallelism uint) *SBOMBuilderConfig {
+	c.Parallelism = parallelism
 	return c
 }
 
-func (c *SBOMBuilderConfig) WithAdditionalTasks(tasks ...Task) *SBOMBuilderConfig {
+func (c *SBOMBuilderConfig) WithTasks(tasks ...Task) *SBOMBuilderConfig {
 	c.TaskGroups = append(c.TaskGroups, tasks)
 	return c
 }
 
-func (c *SBOMBuilderConfig) WithCatalogers(src source.Metadata, cfg cataloger.Config, expression string) *SBOMBuilderConfig {
-	var pkgTasks TaskDescriptors
+func (c *SBOMBuilderConfig) WithDefaultCatalogers(src source.Metadata, cfg cataloger.Config, expressions ...string) *SBOMBuilderConfig {
+	var pkgTasks taskDescriptors
 
-	if expression == "" {
+	if len(expressions) == 0 {
 		switch src.Scheme {
 		case source.ImageScheme:
-			pkgTasks = allCatalogingTaskDescriptors(cfg).AllTags(imageTag)
+			pkgTasks = allCatalogingTaskDescriptors(cfg).allTags(imageTag)
 		case source.FileScheme, source.DirectoryScheme:
-			pkgTasks = allCatalogingTaskDescriptors(cfg).AllTags(directoryTag)
+			pkgTasks = allCatalogingTaskDescriptors(cfg).allTags(directoryTag)
 		default:
-			// TODO
-			panic("not implemented")
+			// TODO: should this be an error? if so, the builder approach needs modification.
+			log.Warnf("unable to determine cataloger defaults for source: %s", src.Scheme)
 		}
 	} else {
-		pkgTasks = allCatalogingTaskDescriptors(cfg).Evaluate(expression)
+		pkgTasks = allCatalogingTaskDescriptors(cfg).Evaluate(expressions...)
 	}
 
 	var fileTasks []Task
@@ -86,13 +82,13 @@ func (c *SBOMBuilderConfig) WithCatalogers(src source.Metadata, cfg cataloger.Co
 
 	c.SearchScope = cfg.Search.Scope
 	c.CaptureFileOwnershipOverlap = cfg.Relationships.FileOwnershipOverlap
-	c.TaskGroups = append(c.TaskGroups, pkgTasks.Tasks(), fileTasks)
+	c.TaskGroups = append(c.TaskGroups, pkgTasks.tasks(), fileTasks)
 	c.packageCatalogingTasks = &c.TaskGroups[0]
 
 	return c
 }
 
-func (c *SBOMBuilderConfig) WithAdditionalCatalogers(cfg cataloger.Config, catalogers ...pkg.Cataloger) *SBOMBuilderConfig {
+func (c *SBOMBuilderConfig) WithCatalogers(cfg cataloger.Config, catalogers ...pkg.Cataloger) *SBOMBuilderConfig {
 	var tasks []Task
 	for _, cat := range catalogers {
 		tasks = append(tasks, newTask(cat, cfg))
@@ -107,7 +103,7 @@ func (c *SBOMBuilderConfig) WithAdditionalCatalogers(cfg cataloger.Config, catal
 	return c
 }
 
-func BuildSBOM(src *source.Source, cfg *SBOMBuilderConfig) (*sbom.SBOM, error) {
+func CreateSBOM(src *source.Source, cfg *SBOMBuilderConfig) (*sbom.SBOM, error) {
 	resolver, err := src.FileResolver(cfg.SearchScope)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get file resolver: %w", err)
@@ -127,6 +123,7 @@ func BuildSBOM(src *source.Source, cfg *SBOMBuilderConfig) (*sbom.SBOM, error) {
 
 	lock := &sync.RWMutex{}
 	for _, tg := range cfg.TaskGroups {
+		// TODO: port parallelism implementation
 		for _, t := range tg {
 			if err := t(resolver, &s, lock); err != nil {
 				return nil, err

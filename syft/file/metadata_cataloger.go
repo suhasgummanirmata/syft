@@ -19,18 +19,25 @@ func NewMetadataCataloger() *MetadataCataloger {
 
 func (i *MetadataCataloger) Catalog(resolver source.FileResolver, coordinates ...source.Coordinates) (map[source.Coordinates]source.FileMetadata, error) {
 	results := make(map[source.Coordinates]source.FileMetadata)
-	var locations []source.Location
+	var locations <-chan source.Location
 
 	if len(coordinates) == 0 {
-		locations = allRegularFiles(resolver)
+		locations = resolver.AllLocations()
 	} else {
-		for _, c := range coordinates {
-			locations = append(locations, source.NewLocationFromCoordinates(c))
-		}
+		locations = func() <-chan source.Location {
+			ch := make(chan source.Location)
+			go func() {
+				close(ch)
+				for _, c := range coordinates {
+					ch <- source.NewLocationFromCoordinates(c)
+				}
+			}()
+			return ch
+		}()
 	}
 
 	stage, prog := metadataCatalogingProgress(int64(len(locations)))
-	for _, location := range locations {
+	for location := range locations {
 		stage.Current = location.RealPath
 		metadata, err := resolver.FileMetadataByLocation(location)
 		if err != nil {

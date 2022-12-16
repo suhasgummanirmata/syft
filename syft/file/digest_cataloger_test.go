@@ -72,8 +72,7 @@ func TestDigestsCataloger(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			c, err := NewDigestsCataloger(test.digests)
-			require.NoError(t, err)
+			c := NewDigestsCataloger(test.digests)
 
 			src, err := source.NewFromDirectory("test-fixtures/last/")
 			require.NoError(t, err)
@@ -138,10 +137,7 @@ func TestDigestsCataloger_MixFileTypes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.path, func(t *testing.T) {
-			c, err := NewDigestsCataloger([]crypto.Hash{crypto.MD5})
-			if err != nil {
-				t.Fatalf("unable to get cataloger: %+v", err)
-			}
+			c := NewDigestsCataloger([]crypto.Hash{crypto.MD5})
 
 			actual, err := c.Catalog(resolver)
 			if err != nil {

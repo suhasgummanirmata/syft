@@ -10,9 +10,9 @@ import (
 
 	"github.com/anchore/syft/internal/log"
 	"github.com/anchore/syft/syft/artifact"
+	"github.com/anchore/syft/syft/cataloger"
 	"github.com/anchore/syft/syft/file"
 	"github.com/anchore/syft/syft/pkg"
-	"github.com/anchore/syft/syft/pkg/cataloger"
 	"github.com/anchore/syft/syft/pkg/cataloger/alpm"
 	"github.com/anchore/syft/syft/pkg/cataloger/apkdb"
 	"github.com/anchore/syft/syft/pkg/cataloger/common/cpe"
@@ -48,16 +48,16 @@ const (
 
 type Task func(source.FileResolver, *sbom.SBOM, *sync.RWMutex) error
 
-type TaskDescriptor struct {
+type taskDescriptor struct {
 	Name string
 	Tags *strset.Set
 	Task Task
 }
 
-type TaskDescriptors []TaskDescriptor
+type taskDescriptors []taskDescriptor
 
-func (tds TaskDescriptors) AllTags(tags ...string) TaskDescriptors {
-	var result []TaskDescriptor
+func (tds taskDescriptors) allTags(tags ...string) taskDescriptors {
+	var result []taskDescriptor
 	for _, td := range tds {
 		if td.Tags.Has(tags...) {
 			result = append(result, td)
@@ -66,17 +66,7 @@ func (tds TaskDescriptors) AllTags(tags ...string) TaskDescriptors {
 	return result
 }
 
-func (tds TaskDescriptors) AnyTags(tags ...string) TaskDescriptors {
-	var result []TaskDescriptor
-	for _, td := range tds {
-		if td.Tags.HasAny(tags...) {
-			result = append(result, td)
-		}
-	}
-	return result
-}
-
-func (tds TaskDescriptors) Tasks() []Task {
+func (tds taskDescriptors) tasks() []Task {
 	var result []Task
 	for _, td := range tds {
 		result = append(result, td.Task)
@@ -90,19 +80,20 @@ func (tds TaskDescriptors) Tasks() []Task {
 // - all catalogers that have both the "installed" and "python" tags...
 // - and additionally all catalogers that have the "os" tag...
 // - and add the "sbom-cataloger" by name.
-func (tds TaskDescriptors) Evaluate(expression string) TaskDescriptors {
-	var result []TaskDescriptor
+func (tds taskDescriptors) Evaluate(expressions ...string) taskDescriptors {
+	var result []taskDescriptor
+	expression := strings.Join(expressions, ",")
 	expression = strings.ReplaceAll(strings.ToLower(expression), " ", "")
 	fields := strings.Split(expression, ",")
 	for _, field := range fields {
 		requiredTags := strings.Split(field, "+")
-		result = append(result, tds.AllTags(requiredTags...)...)
+		result = append(result, tds.allTags(requiredTags...)...)
 	}
 	return result
 }
 
-func allCatalogingTaskDescriptors(cfg cataloger.Config) TaskDescriptors {
-	return []TaskDescriptor{
+func allCatalogingTaskDescriptors(cfg cataloger.Config) taskDescriptors {
+	return []taskDescriptor{
 		// OS package installed catalogers
 		newTaskDescriptor(cfg, alpm.NewAlpmdbCataloger(), directoryTag, installedTag, imageTag, packageTag, osTag, "alpm", "archlinux"),
 		newTaskDescriptor(cfg, apkdb.NewApkdbCataloger(), directoryTag, installedTag, imageTag, packageTag, osTag, "apk", "alpine"),
@@ -116,7 +107,6 @@ func allCatalogingTaskDescriptors(cfg cataloger.Config) TaskDescriptors {
 		// language-specific package installed catalogers
 		newTaskDescriptor(cfg, dotnet.NewDotnetDepsCataloger(), installedTag, imageTag, packageTag, languageTag, "dotnet", "c#"),
 		newTaskDescriptor(cfg, javascript.NewJavascriptPackageCataloger(), installedTag, imageTag, packageTag, languageTag, "javascript", "node"),
-		newTaskDescriptor(cfg, javascript.NewNodeBinaryCataloger(), installedTag, imageTag, packageTag, languageTag, "javascript", "node"),
 		newTaskDescriptor(cfg, php.NewPHPComposerInstalledCataloger(), installedTag, imageTag, packageTag, languageTag, "php", "composer"),
 		newTaskDescriptor(cfg, ruby.NewGemSpecCataloger(), installedTag, imageTag, packageTag, languageTag, "ruby", "gem"),
 		newTaskDescriptor(cfg, rust.NewCargoLockCataloger(), installedTag, imageTag, packageTag, languageTag, "rust", "binary"),
@@ -129,7 +119,6 @@ func allCatalogingTaskDescriptors(cfg cataloger.Config) TaskDescriptors {
 		newTaskDescriptor(cfg, golang.NewGoModFileCataloger(), declaredTag, directoryTag, packageTag, languageTag, "go", "golang", "gomod"),
 		newTaskDescriptor(cfg, java.NewJavaPomCataloger(), declaredTag, directoryTag, packageTag, languageTag, "java", "maven"),
 		newTaskDescriptor(cfg, javascript.NewJavascriptLockCataloger(), declaredTag, directoryTag, packageTag, languageTag, "javascript", "node"),
-		newTaskDescriptor(cfg, javascript.NewNodeBinaryCataloger(), declaredTag, directoryTag, packageTag, languageTag, "javascript", "node", "binary"),
 		newTaskDescriptor(cfg, php.NewPHPComposerLockCataloger(), declaredTag, directoryTag, packageTag, languageTag, "php", "composer"),
 		newTaskDescriptor(cfg, python.NewPythonIndexCataloger(), declaredTag, directoryTag, packageTag, languageTag, "python"),
 		newTaskDescriptor(cfg, ruby.NewGemFileLockCataloger(), declaredTag, directoryTag, packageTag, languageTag, "ruby", "gem"),
@@ -146,8 +135,8 @@ func allCatalogingTaskDescriptors(cfg cataloger.Config) TaskDescriptors {
 	}
 }
 
-func newTaskDescriptor(cfg cataloger.Config, c pkg.Cataloger, tags ...string) TaskDescriptor {
-	return TaskDescriptor{
+func newTaskDescriptor(cfg cataloger.Config, c pkg.Cataloger, tags ...string) taskDescriptor {
+	return taskDescriptor{
 		Name: c.Name(),
 		Tags: strset.New(tags...),
 		Task: newTask(c, cfg),

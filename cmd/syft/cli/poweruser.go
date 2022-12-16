@@ -18,6 +18,7 @@ const powerUserExample = `  {{.appName}} {{.command}} <image>
   All behavior is controlled via application configuration and environment variables (see https://github.com/anchore/syft#configuration)
 `
 
+// Deprecated: will be removed in syft v1.0.0
 func PowerUser(v *viper.Viper, app *config.Application, ro *options.RootOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "power-user [IMAGE]",

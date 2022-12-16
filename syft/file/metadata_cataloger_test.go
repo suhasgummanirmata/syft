@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/anchore/stereoscope/pkg/file"
 	"github.com/anchore/stereoscope/pkg/imagetest"
@@ -26,19 +27,13 @@ func TestFileMetadataCataloger(t *testing.T) {
 	c := NewMetadataCataloger()
 
 	src, err := source.NewFromImage(img, "---")
-	if err != nil {
-		t.Fatalf("could not create source: %+v", err)
-	}
+	require.NoError(t, err)
 
 	resolver, err := src.FileResolver(source.SquashedScope)
-	if err != nil {
-		t.Fatalf("could not create resolver: %+v", err)
-	}
+	require.NoError(t, err)
 
 	actual, err := c.Catalog(resolver)
-	if err != nil {
-		t.Fatalf("could not catalog: %+v", err)
-	}
+	require.NoError(t, err)
 
 	tests := []struct {
 		path     string
@@ -131,9 +126,7 @@ func TestFileMetadataCataloger(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.path, func(t *testing.T) {
 			_, ref, err := img.SquashedTree().File(file.Path(test.path))
-			if err != nil {
-				t.Fatalf("unable to get file: %+v", err)
-			}
+			require.NoError(t, err)
 
 			l := source.NewLocationFromImage(test.path, *ref, img)
 

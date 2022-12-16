@@ -31,6 +31,7 @@ import (
 	"github.com/anchore/syft/syft/source"
 )
 
+// Deprecated: will be removed in v1.0.0 of syft
 // CatalogPackages takes an inventory of packages from the given image from a particular perspective
 // (e.g. squashed source, all-layers source). Returns the discovered  set of packages, the identified Linux
 // distribution, and the source object used to wrap the data source.

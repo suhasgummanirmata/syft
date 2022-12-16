@@ -3,7 +3,6 @@ package packages
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/wagoodman/go-partybus"
 
@@ -15,10 +14,11 @@ import (
 	"github.com/anchore/syft/internal/log"
 	"github.com/anchore/syft/internal/ui"
 	"github.com/anchore/syft/syft"
+	"github.com/anchore/syft/syft/artifact"
+	"github.com/anchore/syft/syft/cataloger"
 	"github.com/anchore/syft/syft/event"
 	"github.com/anchore/syft/syft/file"
 	"github.com/anchore/syft/syft/formats/template"
-	"github.com/anchore/syft/syft/pkg/cataloger"
 	"github.com/anchore/syft/syft/sbom"
 	"github.com/anchore/syft/syft/source"
 )
@@ -103,7 +103,7 @@ func GenerateSBOM(src *source.Source, errs chan error, app *config.Application) 
 	}
 
 	cfg := syft.DefaultSBOMBuilderConfig().
-		WithCatalogers(src.Metadata,
+		WithDefaultCatalogers(src.Metadata,
 			cataloger.Config{
 				Search: cataloger.SearchConfig{
 					IncludeIndexedArchives:   app.Package.SearchIndexedArchives,
@@ -118,13 +118,14 @@ func GenerateSBOM(src *source.Source, errs chan error, app *config.Application) 
 					GenerateCPEs:          true, // TODO: tie to app config
 					GuessLanguageFromPURL: true, // TODO: tie to app config
 				},
-				FileCatalogingSelection: cataloger.OwnedFilesSelection, // TODO: tie to app config
+				// TODO: make default the owned-files selection
+				FileCatalogingSelection: cataloger.NoFilesSelection, // TODO: tie to app config
 				FileHashers:             hashers,
 			},
-			strings.Join(app.Catalogers, ","), // TODO: update app config to just be a string?
+			app.Catalogers...,
 		)
 
-	return syft.BuildSBOM(src, cfg)
+	return syft.CreateSBOM(src, cfg)
 }
 
 func validateOutputOptions(app *config.Application) error {
@@ -141,4 +142,15 @@ func validateOutputOptions(app *config.Application) error {
 	}
 
 	return nil
+}
+
+// Deprecated: will be removed in v1.0.0
+func MergeRelationships(cs ...<-chan artifact.Relationship) (relationships []artifact.Relationship) {
+	for _, c := range cs {
+		for n := range c {
+			relationships = append(relationships, n)
+		}
+	}
+
+	return relationships
 }

@@ -16,12 +16,11 @@ import (
 	"github.com/anchore/go-logger"
 	"github.com/anchore/syft/internal"
 	"github.com/anchore/syft/internal/log"
-	"github.com/anchore/syft/syft/pkg/cataloger"
+	"github.com/anchore/syft/syft/cataloger"
 )
 
 var (
 	ErrApplicationConfigNotFound = fmt.Errorf("application config not found")
-	catalogerEnabledDefault      = false
 )
 
 type defaultValueLoader interface {
@@ -65,7 +64,6 @@ func (cfg Application) ToCatalogerConfig() cataloger.Config {
 			IncludeUnindexedArchives: cfg.Package.SearchUnindexedArchives,
 			Scope:                    cfg.Package.Cataloger.ScopeOpt,
 		},
-		Catalogers: cfg.Catalogers,
 	}
 }
 

@@ -16,6 +16,7 @@ type ContentsCataloger struct {
 	skipFilesAboveSizeInBytes int64
 }
 
+// Deprecated: will be removed in syft v1.0.0
 func NewContentsCataloger(globs []string, skipFilesAboveSize int64) (*ContentsCataloger, error) {
 	return &ContentsCataloger{
 		globs:                     globs,
@@ -23,6 +24,7 @@ func NewContentsCataloger(globs []string, skipFilesAboveSize int64) (*ContentsCa
 	}, nil
 }
 
+// Deprecated: will be removed in syft v1.0.0
 func (i *ContentsCataloger) Catalog(resolver source.FileResolver) (map[source.Coordinates]string, error) {
 	results := make(map[source.Coordinates]string)
 	var locations []source.Location

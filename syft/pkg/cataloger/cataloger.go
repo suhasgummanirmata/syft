@@ -33,6 +33,7 @@ import (
 
 const AllCatalogersPattern = "all"
 
+// Deprecated: will be removed in v1.0.0 of syft
 // ImageCatalogers returns a slice of locally implemented catalogers that are fit for detecting installations of packages.
 func ImageCatalogers(cfg Config) []pkg.Cataloger {
 	return filterCatalogers([]pkg.Cataloger{
@@ -53,6 +54,7 @@ func ImageCatalogers(cfg Config) []pkg.Cataloger {
 	}, cfg.Catalogers)
 }
 
+// Deprecated: will be removed in v1.0.0 of syft
 // DirectoryCatalogers returns a slice of locally implemented catalogers that are fit for detecting packages from index files (and select installations)
 func DirectoryCatalogers(cfg Config) []pkg.Cataloger {
 	return filterCatalogers([]pkg.Cataloger{
@@ -82,6 +84,7 @@ func DirectoryCatalogers(cfg Config) []pkg.Cataloger {
 	}, cfg.Catalogers)
 }
 
+// Deprecated: will be removed in v1.0.0 of syft
 // AllCatalogers returns all implemented catalogers
 func AllCatalogers(cfg Config) []pkg.Cataloger {
 	return filterCatalogers([]pkg.Cataloger{

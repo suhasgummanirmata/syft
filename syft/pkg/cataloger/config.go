@@ -1,76 +1,23 @@
 package cataloger
 
 import (
-	"crypto"
-
 	"github.com/anchore/syft/syft/pkg/cataloger/java"
-	"github.com/anchore/syft/syft/source"
 )
 
-const (
-	NoFilesSelection    FileCatalogingSelection = "no-files"
-	OwnedFilesSelection FileCatalogingSelection = "owned-files"
-	AllFilesSelection   FileCatalogingSelection = "all-files"
-)
-
-type FileCatalogingSelection string
-
+// Deprecated: will be removed in syft v1.0.0
 type Config struct {
-	Search                  SearchConfig
-	Catalogers              []string
-	Relationships           RelationshipsConfig
-	SyntheticData           SyntheticConfig
-	FileCatalogingSelection FileCatalogingSelection
-	FileHashers             []crypto.Hash
+	Search     SearchConfig
+	Catalogers []string
 }
 
-type RelationshipsConfig struct {
-	FileOwnership        bool
-	FileOwnershipOverlap bool
-}
-
-type SyntheticConfig struct {
-	GenerateCPEs          bool
-	GuessLanguageFromPURL bool
-}
-
-type SearchConfig struct {
-	IncludeIndexedArchives   bool
-	IncludeUnindexedArchives bool
-	Scope                    source.Scope
-}
-
+// Deprecated: will be removed in syft v1.0.0
 func DefaultConfig() Config {
 	return Config{
-		Search:                  DefaultSearchConfig(),
-		Relationships:           DefaultRelationshipsConfig(),
-		SyntheticData:           DefaultSyntheticConfig(),
-		FileCatalogingSelection: OwnedFilesSelection,
+		Search: DefaultSearchConfig(),
 	}
 }
 
-func DefaultSearchConfig() SearchConfig {
-	return SearchConfig{
-		IncludeIndexedArchives:   true,
-		IncludeUnindexedArchives: false,
-		Scope:                    source.SquashedScope,
-	}
-}
-
-func DefaultSyntheticConfig() SyntheticConfig {
-	return SyntheticConfig{
-		GenerateCPEs:          true,
-		GuessLanguageFromPURL: true,
-	}
-}
-
-func DefaultRelationshipsConfig() RelationshipsConfig {
-	return RelationshipsConfig{
-		FileOwnership:        true,
-		FileOwnershipOverlap: true,
-	}
-}
-
+// Deprecated: will be removed in syft v1.0.0
 func (c Config) Java() java.Config {
 	return java.Config{
 		SearchUnindexedArchives: c.Search.IncludeUnindexedArchives,

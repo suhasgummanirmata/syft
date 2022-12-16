@@ -8,12 +8,15 @@ import (
 	"github.com/anchore/syft/syft"
 	"github.com/anchore/syft/syft/artifact"
 	"github.com/anchore/syft/syft/file"
+	"github.com/anchore/syft/syft/pkg/cataloger"
 	"github.com/anchore/syft/syft/sbom"
 	"github.com/anchore/syft/syft/source"
 )
 
+// Deprecated: will be removed in syft 1.0
 type Task func(*sbom.Artifacts, *source.Source) ([]artifact.Relationship, error)
 
+// Deprecated: will be removed in syft 1.0
 func Tasks(app *config.Application) ([]Task, error) {
 	var tasks []Task
 
@@ -39,13 +42,22 @@ func Tasks(app *config.Application) ([]Task, error) {
 	return tasks, nil
 }
 
+// Deprecated: will be removed in syft 1.0
 func generateCatalogPackagesTask(app *config.Application) (Task, error) {
 	if !app.Package.Cataloger.Enabled {
 		return nil, nil
 	}
 
 	task := func(results *sbom.Artifacts, src *source.Source) ([]artifact.Relationship, error) {
-		packageCatalog, relationships, theDistro, err := syft.CatalogPackages(src, app.ToCatalogerConfig())
+		cfg := cataloger.Config{
+			Search: cataloger.SearchConfig{
+				IncludeIndexedArchives:   app.Package.SearchIndexedArchives,
+				IncludeUnindexedArchives: app.Package.SearchUnindexedArchives,
+				Scope:                    app.Package.Cataloger.ScopeOpt,
+			},
+			Catalogers: app.Catalogers,
+		}
+		packageCatalog, relationships, theDistro, err := syft.CatalogPackages(src, cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -59,6 +71,7 @@ func generateCatalogPackagesTask(app *config.Application) (Task, error) {
 	return task, nil
 }
 
+// Deprecated: will be removed in syft 1.0
 func generateCatalogFileMetadataTask(app *config.Application) (Task, error) {
 	if !app.FileMetadata.Cataloger.Enabled {
 		return nil, nil
@@ -83,6 +96,7 @@ func generateCatalogFileMetadataTask(app *config.Application) (Task, error) {
 	return task, nil
 }
 
+// Deprecated: will be removed in syft 1.0
 func generateCatalogFileDigestsTask(app *config.Application) (Task, error) {
 	if !app.FileMetadata.Cataloger.Enabled {
 		return nil, nil
@@ -126,6 +140,7 @@ func generateCatalogFileDigestsTask(app *config.Application) (Task, error) {
 	return task, nil
 }
 
+// Deprecated: will be removed in syft 1.0
 func generateCatalogSecretsTask(app *config.Application) (Task, error) {
 	if !app.Secrets.Cataloger.Enabled {
 		return nil, nil
@@ -158,6 +173,7 @@ func generateCatalogSecretsTask(app *config.Application) (Task, error) {
 	return task, nil
 }
 
+// Deprecated: will be removed in syft 1.0
 func generateCatalogContentsTask(app *config.Application) (Task, error) {
 	if !app.FileContents.Cataloger.Enabled {
 		return nil, nil
@@ -185,6 +201,7 @@ func generateCatalogContentsTask(app *config.Application) (Task, error) {
 	return task, nil
 }
 
+// Deprecated: will be removed in syft 1.0
 func RunTask(t Task, a *sbom.Artifacts, src *source.Source, c chan<- artifact.Relationship, errs chan<- error) {
 	defer close(c)
 

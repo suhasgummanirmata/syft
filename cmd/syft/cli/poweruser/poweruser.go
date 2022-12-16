@@ -26,6 +26,7 @@ import (
 	"github.com/anchore/syft/syft/source"
 )
 
+// Deprecated: will be removed in syft v1.0.0
 func Run(ctx context.Context, app *config.Application, args []string) error {
 	writer, err := sbom.NewWriter(sbom.WriterOption{
 		Format: syftjson.Format(),
@@ -65,6 +66,7 @@ func Run(ctx context.Context, app *config.Application, args []string) error {
 	)
 }
 
+// Deprecated: will be removed in syft v1.0.0
 func execWorker(app *config.Application, si source.Input, writer sbom.Writer) <-chan error {
 	errs := make(chan error)
 	go func() {
