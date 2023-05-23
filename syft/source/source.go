@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -22,7 +23,14 @@ import (
 	"github.com/anchore/stereoscope/pkg/image"
 	"github.com/anchore/syft/internal/log"
 	"github.com/anchore/syft/syft/artifact"
+	plog "sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+func memoryConsumption() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	plog.Log.Info(fmt.Sprintf("Allocated memory: %v bytes\n", m.Alloc))
+}
 
 // Source is an object that captures the data source to be cataloged, configuration, and a specific resolver used
 // in cataloging (based on the data source and configuration)
@@ -147,15 +155,23 @@ func New(in Input, registryOptions *image.RegistryOptions, exclusions []string) 
 }
 
 func generateImageSource(in Input, registryOptions *image.RegistryOptions) (*Source, func(), error) {
+	log.Log.Info("Line 158")
+	memoryConsumption()
 	img, cleanup, err := getImageWithRetryStrategy(in, registryOptions)
 	if err != nil || img == nil {
 		return nil, cleanup, fmt.Errorf("could not fetch image %q: %w", in.Location, err)
 	}
 
+	log.Log.Info("Line 165")
+	memoryConsumption()
+
 	s, err := NewFromImageWithName(img, in.Location, in.Name)
 	if err != nil {
 		return nil, cleanup, fmt.Errorf("could not populate source with image: %w", err)
 	}
+
+	log.Log.Info("Line 173")
+	memoryConsumption()
 
 	return &s, cleanup, nil
 }
@@ -186,6 +202,7 @@ func getImageWithRetryStrategy(in Input, registryOptions *image.RegistryOptions)
 		if err := img.Cleanup(); err != nil {
 			log.Warnf("unable to cleanup image=%q: %w", in.UserInput, err)
 		}
+		img = nil
 	}
 	if err == nil {
 		// Success on the first try!
